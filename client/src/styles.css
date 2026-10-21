@@ -793,9 +793,12 @@ a:hover {
 }
 
 .row-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-1);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.row-actions .button + .button {
+  margin-left: var(--space-1);
 }
 
 .amount {
