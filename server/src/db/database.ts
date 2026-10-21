@@ -22,6 +22,13 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 CREATE INDEX IF NOT EXISTS idx_transactions_user_date
   ON transactions (user_id, occurred_on);
+
+CREATE TABLE IF NOT EXISTS budgets (
+  user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  category     TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+  PRIMARY KEY (user_id, category)
+);
 `;
 
 export type Database = DatabaseSync;

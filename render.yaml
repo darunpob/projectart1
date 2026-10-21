@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: spendwise
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm run seed && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_DIST
+        value: ../client/dist
+      - key: DATABASE_PATH
+        value: /tmp/spendwise.db

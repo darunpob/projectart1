@@ -36,17 +36,32 @@ async function toApiError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, code, message, issues);
 }
 
-export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function send(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers);
   const token = readToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
-  if (init.body) headers.set('Content-Type', 'application/json');
+  if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
   const response = await fetch(`/api${path}`, { ...init, headers });
   if (response.status === 401 && token) onUnauthorized?.();
   if (!response.ok) throw await toApiError(response);
+  return response;
+}
+
+export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await send(path, init);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+export async function apiDownload(path: string, fallbackName: string): Promise<void> {
+  const response = await send(path, {});
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = Object.assign(document.createElement('a'), { href: url, download: filename });
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 export const jsonBody = (body: unknown): RequestInit['body'] => JSON.stringify(body);

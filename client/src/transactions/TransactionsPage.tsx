@@ -3,6 +3,7 @@ import { useApiQuery } from '../api/useApiQuery';
 import { MonthSwitcher } from '../layout/MonthSwitcher';
 import { StatusPanel } from '../layout/StatusPanel';
 import { useMonthParam } from '../months/month';
+import { CsvActions } from './CsvActions';
 import { Dialog } from './Dialog';
 import { TransactionForm } from './TransactionForm';
 import { TransactionTable } from './TransactionTable';
@@ -80,6 +81,8 @@ export function TransactionsPage() {
           ))}
         </select>
       </div>
+
+      <CsvActions filters={{ month, type: type || undefined, category, search: deferredSearch }} onImported={listing.reload} />
 
       <StatusPanel error={listing.error} loading={listing.loading && !listing.value} onRetry={listing.reload} />
       {listing.value && (

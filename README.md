@@ -4,15 +4,17 @@ A full-stack personal finance tracker. Record income and expenses, filter and se
 
 ![Dashboard, dark mode](docs/screenshots/dashboard-dark.png)
 
-| Light mode | Add transaction |
-|---|---|
-| ![Dashboard, light mode](docs/screenshots/dashboard-light.png) | ![Transaction dialog](docs/screenshots/transactions-dark.png) |
+| Budgets | Light mode | Add transaction |
+|---|---|---|
+| ![Budgets](docs/screenshots/budgets-dark.png) | ![Dashboard, light mode](docs/screenshots/dashboard-light.png) | ![Transaction dialog](docs/screenshots/transactions-dark.png) |
 
 ## Features
 
 - **Accounts.** Register and log in with email and password. Passwords are hashed with bcrypt and sessions use JWT bearer tokens.
 - **Transactions.** Create, edit and delete income and expense records. You can filter by month, type and category, and search notes with debounced input.
 - **Dashboard.** Shows KPI tiles for income, expenses, net balance and savings rate, a 6-month income vs. expense chart with hover tooltips, and a ranked breakdown of spending by category.
+- **Budgets.** Set a monthly limit for each expense category. Each budget shows *On track*, *Almost there* (80% or more) or *Over budget*, using an icon and a label as well as color. The dashboard warns when a category goes over its limit.
+- **CSV export and import.** Export the current filtered view to a CSV file. Imports accept columns in any order and are all-or-nothing: if any row is invalid, nothing is saved and every bad row is reported. Exported cells that start with `=`, `+`, `-` or `@` are escaped so spreadsheets don't run them as formulas.
 - **Per-user data.** Every query is scoped to the signed-in user, and the tests cover this.
 - **Money stored as integer cents.** This avoids floating-point drift.
 - **Responsive UI.** Works on desktop and phones, follows the system dark/light setting, and is keyboard accessible. Charts include a screen-reader table.
@@ -36,6 +38,7 @@ client/ (React SPA)              server/ (Express API)
   auth/         ──── /api/auth ────▶  auth/          register · login · JWT
   transactions/ ── /api/transactions ▶ transactions/  routes → service → repository
   dashboard/    ──── /api/summary ──▶  summary/       SQL aggregation + trend fill
+  budgets/      ──── /api/budgets ──▶  budgets/       limits + spending status
                                        db/            schema + node:sqlite
 ```
 
@@ -95,19 +98,34 @@ All endpoints except `/api/auth/register`, `/api/auth/login` and `/api/health` r
 | `PATCH` | `/api/transactions/:id` | Partial update. The category is re-validated against the type |
 | `DELETE` | `/api/transactions/:id` | Returns `204` |
 | `GET` | `/api/transactions/categories` | Lists income and expense categories |
+| `GET` | `/api/transactions/export` | Returns a CSV download. Accepts the same filters as the list endpoint |
+| `POST` | `/api/transactions/import` | `Content-Type: text/csv`. Columns: `date,type,category,amount[,note]`. Returns `422` with per-row issues |
 | `GET` | `/api/summary?month=YYYY-MM` | Totals, savings rate, category breakdown and 6-month trend |
+| `GET` | `/api/budgets?month=YYYY-MM` | Budgets with the amount spent, remaining and status |
+| `PUT` | `/api/budgets/:category` | `{ limitCents }`. Creates or updates the budget |
+| `DELETE` | `/api/budgets/:category` | Removes the budget |
 
 Errors use the same JSON format everywhere: `{ "error": { "code", "message", "issues?" } }`.
 
 ## Testing
 
-- **Server (19 tests).** Covers the auth flows (duplicate email, forged and expired tokens, malformed JSON), the transaction CRUD lifecycle, filtering (including escaping of `LIKE` wildcards), isolation between users, summary aggregation and trend zero-filling, and SPA fallback hosting.
-- **Client (21 tests).** Covers money parsing without float drift, formatting, month arithmetic, and the transaction form's behaviour (type switching, validation, surfacing server errors).
+- **Server (38 tests).** Covers the auth flows (duplicate email, forged and expired tokens, malformed JSON), the transaction CRUD lifecycle, filtering (including escaping of `LIKE` wildcards), isolation between users, summary aggregation and trend zero-filling, budget status thresholds, the CSV parser (quoted fields, embedded newlines, BOM, formula escaping), all-or-nothing imports and SPA fallback hosting.
+- **Client (24 tests).** Covers money parsing without float drift, formatting, month arithmetic, the transaction form (type switching, validation, surfacing server errors) and the budget card's states and editing.
+
+## Deploying a live demo (Render, free plan)
+
+The repo includes a [`render.yaml`](render.yaml) blueprint.
+
+1. Push the repo to GitHub.
+2. In Render, choose **New → Blueprint** and select the repo. Render builds the app, generates `JWT_SECRET` and starts the service.
+3. Every start re-seeds the demo account, so visitors can sign in straight away with **Use demo account**.
+
+> The free plan has no persistent disk. The database lives in `/tmp` and is reset on every restart, which keeps the public demo clean. For real use, attach a disk and point `DATABASE_PATH` at it, or deploy the Docker image.
 
 ## Roadmap
 
-- [ ] Monthly budgets per category with over-budget alerts
-- [ ] CSV import and export
+- [x] Monthly budgets per category with over-budget alerts
+- [x] CSV import and export
 - [ ] Recurring transactions
 - [ ] Refresh-token rotation and login rate limiting
 - [ ] Playwright end-to-end tests in CI

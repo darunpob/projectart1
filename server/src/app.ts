@@ -5,6 +5,9 @@ import { authRouter } from './auth/auth.routes.js';
 import { AuthService } from './auth/auth.service.js';
 import { requireAuth } from './auth/require-auth.js';
 import { UsersRepository } from './auth/users.repository.js';
+import { BudgetsRepository } from './budgets/budgets.repository.js';
+import { budgetsRouter } from './budgets/budgets.routes.js';
+import { BudgetsService } from './budgets/budgets.service.js';
 import type { Database } from './db/database.js';
 import { apiNotFound, errorHandler } from './http/error-handler.js';
 import { SummaryRepository } from './summary/summary.repository.js';
@@ -43,6 +46,7 @@ export function createApp({ db, jwtSecret, clientDistPath = null }: AppDependenc
   app.use('/api/auth', authRouter(auth));
   app.use('/api/transactions', requireAuth(auth), transactionsRouter(new TransactionsService(new TransactionsRepository(db))));
   app.use('/api/summary', requireAuth(auth), summaryRouter(new SummaryService(new SummaryRepository(db))));
+  app.use('/api/budgets', requireAuth(auth), budgetsRouter(new BudgetsService(new BudgetsRepository(db))));
   app.use('/api', apiNotFound);
 
   if (clientDistPath) serveClient(app, clientDistPath);

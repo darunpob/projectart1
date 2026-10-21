@@ -1,9 +1,9 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
-import { HttpError } from './http-error.js';
+import { HttpError, type ErrorIssue } from './http-error.js';
 
 interface ErrorBody {
-  error: { code: string; message: string; issues?: { path: string; message: string }[] };
+  error: { code: string; message: string; issues?: ErrorIssue[] };
 }
 
 function isMalformedJson(err: unknown): boolean {
@@ -16,7 +16,7 @@ function toErrorResponse(err: unknown): { status: number; body: ErrorBody } {
     return { status: 400, body: { error: { code: 'validation_failed', message: 'Invalid request', issues } } };
   }
   if (err instanceof HttpError) {
-    return { status: err.status, body: { error: { code: err.code, message: err.message } } };
+    return { status: err.status, body: { error: { code: err.code, message: err.message, issues: err.issues } } };
   }
   if (isMalformedJson(err)) {
     return { status: 400, body: { error: { code: 'malformed_json', message: 'Request body is not valid JSON' } } };

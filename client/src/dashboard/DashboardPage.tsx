@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { useApiQuery } from '../api/useApiQuery';
 import { useAuth } from '../auth/AuthContext';
+import { BudgetAlert } from '../budgets/BudgetAlert';
 import { MonthSwitcher } from '../layout/MonthSwitcher';
 import { StatusPanel } from '../layout/StatusPanel';
 import { formatMoney, formatPercent } from '../money/money';
@@ -32,6 +33,7 @@ export function DashboardPage() {
       </header>
 
       <StatusPanel error={summary.error} loading={summary.loading && !overview} onRetry={summary.reload} />
+      <BudgetAlert month={month} />
 
       {overview && (
         <>

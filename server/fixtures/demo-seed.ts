@@ -32,6 +32,14 @@ const MONTHLY_PATTERN: RecurringEntry[] = [
   { type: 'expense', category: 'Education', note: 'Online course', day: 24, baseCents: 99_000, jitter: 0.5 },
 ];
 
+const DEMO_BUDGETS: [category: string, limitCents: number][] = [
+  ['Food & Dining', 1_000_000],
+  ['Shopping', 250_000],
+  ['Transport', 400_000],
+  ['Entertainment', 90_000],
+  ['Housing', 1_600_000],
+];
+
 function seededRandom(seed: number): () => number {
   let state = seed;
   return () => {
@@ -56,6 +64,9 @@ export function seedDemoData(db: Database, now: Date = new Date()): number {
     `INSERT INTO transactions (user_id, type, amount_cents, category, note, occurred_on)
      VALUES (?, ?, ?, ?, ?, ?)`,
   );
+
+  const insertBudget = db.prepare('INSERT INTO budgets (user_id, category, amount_cents) VALUES (?, ?, ?)');
+  for (const [category, limitCents] of DEMO_BUDGETS) insertBudget.run(userId, category, limitCents);
 
   let inserted = 0;
   for (let offset = MONTHS_OF_HISTORY - 1; offset >= 0; offset -= 1) {

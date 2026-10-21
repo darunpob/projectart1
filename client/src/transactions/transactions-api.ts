@@ -1,4 +1,4 @@
-import { apiRequest, jsonBody } from '../api/http';
+import { apiDownload, apiRequest, jsonBody } from '../api/http';
 
 export type TransactionType = 'income' | 'expense';
 
@@ -45,4 +45,12 @@ export const transactionsApi = {
   update: (id: number, draft: Partial<TransactionDraft>) =>
     apiRequest<{ transaction: Transaction }>(`/transactions/${id}`, { method: 'PATCH', body: jsonBody(draft) }),
   remove: (id: number) => apiRequest<void>(`/transactions/${id}`, { method: 'DELETE' }),
+  exportCsv: (filters: TransactionFilters) =>
+    apiDownload(`/transactions/export${toQueryString(filters)}`, 'spendwise.csv'),
+  importCsv: (csvText: string) =>
+    apiRequest<{ imported: number }>('/transactions/import', {
+      method: 'POST',
+      body: csvText,
+      headers: { 'Content-Type': 'text/csv' },
+    }).then((response) => response.imported),
 };

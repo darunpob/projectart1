@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { AuthPage } from './auth/AuthPage';
+import { BudgetsPage } from './budgets/BudgetsPage';
 import { DashboardPage } from './dashboard/DashboardPage';
 import { AppShell } from './layout/AppShell';
 import { TransactionsPage } from './transactions/TransactionsPage';
@@ -35,6 +36,7 @@ export function App() {
           >
             <Route index element={<DashboardPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
+            <Route path="budgets" element={<BudgetsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

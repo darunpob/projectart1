@@ -97,6 +97,18 @@ export class TransactionsRepository {
     return toTransaction(row);
   }
 
+  createMany(userId: number, inputs: CreateTransactionInput[]): number {
+    this.#db.exec('BEGIN');
+    try {
+      for (const input of inputs) this.create(userId, input);
+      this.#db.exec('COMMIT');
+      return inputs.length;
+    } catch (cause) {
+      this.#db.exec('ROLLBACK');
+      throw cause;
+    }
+  }
+
   replace(userId: number, transaction: Transaction): Transaction {
     const row = this.#db
       .prepare(

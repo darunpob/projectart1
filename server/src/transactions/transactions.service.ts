@@ -1,11 +1,20 @@
 import { HttpError, notFound } from '../http/http-error.js';
 import { isCategoryAllowed, type TransactionType } from './categories.js';
+import { parseTransactionsCsv, toCsv, type CsvRowError } from './csv.js';
 import type { Transaction, TransactionsRepository } from './transactions.repository.js';
 import type {
   CreateTransactionInput,
   ListTransactionsQuery,
   UpdateTransactionInput,
 } from './transactions.schemas.js';
+
+const invalidCsv = (rowErrors: CsvRowError[]) =>
+  new HttpError(
+    422,
+    'invalid_csv',
+    `${rowErrors.length} row(s) could not be imported; nothing was saved`,
+    rowErrors.map((rowError) => ({ path: `row ${rowError.row}`, message: rowError.message })),
+  );
 
 function assertCategoryAllowed(type: TransactionType, category: string): void {
   if (isCategoryAllowed(type, category)) return;
@@ -39,5 +48,16 @@ export class TransactionsService {
 
   delete(userId: number, id: number): void {
     if (!this.#repository.delete(userId, id)) throw notFound('Transaction');
+  }
+
+  exportCsv(userId: number, query: ListTransactionsQuery): string {
+    return toCsv(this.#repository.list(userId, query));
+  }
+
+  importCsv(userId: number, csvText: string): number {
+    const { drafts, errors } = parseTransactionsCsv(csvText);
+    if (errors.length > 0) throw invalidCsv(errors);
+    if (drafts.length === 0) throw new HttpError(400, 'empty_import', 'The file has no transactions to import');
+    return this.#repository.createMany(userId, drafts);
   }
 }
