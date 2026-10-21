@@ -10,6 +10,9 @@ import { budgetsRouter } from './budgets/budgets.routes.js';
 import { BudgetsService } from './budgets/budgets.service.js';
 import type { Database } from './db/database.js';
 import { apiNotFound, errorHandler } from './http/error-handler.js';
+import { RecurringRepository } from './recurring/recurring.repository.js';
+import { recurringRouter, syncRecurring } from './recurring/recurring.routes.js';
+import { RecurringService, type Clock } from './recurring/recurring.service.js';
 import { SummaryRepository } from './summary/summary.repository.js';
 import { summaryRouter } from './summary/summary.routes.js';
 import { SummaryService } from './summary/summary.service.js';
@@ -21,6 +24,7 @@ export interface AppDependencies {
   db: Database;
   jwtSecret: string;
   clientDistPath?: string | null;
+  clock?: Clock;
 }
 
 function serveClient(app: Express, distPath: string): void {
@@ -32,9 +36,11 @@ function serveClient(app: Express, distPath: string): void {
   });
 }
 
-export function createApp({ db, jwtSecret, clientDistPath = null }: AppDependencies): Express {
+export function createApp({ db, jwtSecret, clientDistPath = null, clock = () => new Date() }: AppDependencies): Express {
   const app = express();
   const auth = new AuthService(new UsersRepository(db), jwtSecret);
+  const recurring = new RecurringService(new RecurringRepository(db), clock);
+  const authenticatedWithSync = [requireAuth(auth), syncRecurring(recurring)];
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -44,9 +50,10 @@ export function createApp({ db, jwtSecret, clientDistPath = null }: AppDependenc
     res.json({ status: 'ok' });
   });
   app.use('/api/auth', authRouter(auth));
-  app.use('/api/transactions', requireAuth(auth), transactionsRouter(new TransactionsService(new TransactionsRepository(db))));
-  app.use('/api/summary', requireAuth(auth), summaryRouter(new SummaryService(new SummaryRepository(db))));
-  app.use('/api/budgets', requireAuth(auth), budgetsRouter(new BudgetsService(new BudgetsRepository(db))));
+  app.use('/api/transactions', authenticatedWithSync, transactionsRouter(new TransactionsService(new TransactionsRepository(db))));
+  app.use('/api/summary', authenticatedWithSync, summaryRouter(new SummaryService(new SummaryRepository(db))));
+  app.use('/api/budgets', authenticatedWithSync, budgetsRouter(new BudgetsService(new BudgetsRepository(db))));
+  app.use('/api/recurring', requireAuth(auth), recurringRouter(recurring));
   app.use('/api', apiNotFound);
 
   if (clientDistPath) serveClient(app, clientDistPath);

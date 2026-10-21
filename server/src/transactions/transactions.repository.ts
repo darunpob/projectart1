@@ -12,6 +12,7 @@ export interface Transaction {
   note: string;
   occurredOn: string;
   createdAt: string;
+  recurringRuleId: number | null;
 }
 
 type TransactionRow = {
@@ -22,9 +23,10 @@ type TransactionRow = {
   note: string;
   occurred_on: string;
   created_at: string;
+  recurring_rule_id: number | null;
 };
 
-const SELECT_COLUMNS = 'id, type, amount_cents, category, note, occurred_on, created_at';
+const SELECT_COLUMNS = 'id, type, amount_cents, category, note, occurred_on, created_at, recurring_rule_id';
 
 const toTransaction = (row: TransactionRow): Transaction => ({
   id: row.id,
@@ -34,6 +36,7 @@ const toTransaction = (row: TransactionRow): Transaction => ({
   note: row.note,
   occurredOn: row.occurred_on,
   createdAt: row.created_at,
+  recurringRuleId: row.recurring_rule_id,
 });
 
 const escapeLike = (term: string) => term.replace(/[\\%_]/g, (match) => `\\${match}`);

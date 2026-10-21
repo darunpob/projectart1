@@ -12,6 +12,7 @@ const sample = (overrides: Partial<Transaction>): Transaction => ({
   note: '',
   occurredOn: '2026-10-01',
   createdAt: '2026-10-01T00:00:00.000Z',
+  recurringRuleId: null,
   ...overrides,
 });
 

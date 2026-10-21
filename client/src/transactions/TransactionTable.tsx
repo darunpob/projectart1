@@ -8,7 +8,7 @@ interface TransactionTableProps {
   onDelete?: (transaction: Transaction) => void;
 }
 
-export function SignedAmount({ transaction }: { transaction: Transaction }) {
+export function SignedAmount({ transaction }: { transaction: Pick<Transaction, 'type' | 'amountCents'> }) {
   const sign = transaction.type === 'income' ? '+' : '−';
   return (
     <span className={`amount amount--${transaction.type}`}>
@@ -48,7 +48,14 @@ export function TransactionTable({ transactions, onEdit, onDelete }: Transaction
               <td>
                 <span className={`pill pill--${transaction.type}`}>{transaction.category}</span>
               </td>
-              <td className="truncate">{transaction.note || <span className="muted">—</span>}</td>
+              <td className="truncate">
+                {transaction.recurringRuleId !== null && (
+                  <span className="recurring-badge" title="Added by a recurring rule" aria-label="Recurring">
+                    ↻
+                  </span>
+                )}
+                {transaction.note || <span className="muted">—</span>}
+              </td>
               <td className="numeric">
                 <SignedAmount transaction={transaction} />
               </td>

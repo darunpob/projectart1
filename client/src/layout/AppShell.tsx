@@ -5,6 +5,7 @@ const NAV_LINKS = [
   { to: '/', label: 'Dashboard', icon: '◧' },
   { to: '/transactions', label: 'Transactions', icon: '≡' },
   { to: '/budgets', label: 'Budgets', icon: '◔' },
+  { to: '/recurring', label: 'Recurring', icon: '↻' },
 ];
 
 export function AppShell() {

@@ -4,9 +4,11 @@ A full-stack personal finance tracker. Record income and expenses, filter and se
 
 ![Dashboard, dark mode](docs/screenshots/dashboard-dark.png)
 
-| Budgets | Light mode | Add transaction |
-|---|---|---|
-| ![Budgets](docs/screenshots/budgets-dark.png) | ![Dashboard, light mode](docs/screenshots/dashboard-light.png) | ![Transaction dialog](docs/screenshots/transactions-dark.png) |
+| Budgets | Recurring |
+|---|---|
+| ![Budgets](docs/screenshots/budgets-dark.png) | ![Recurring rules](docs/screenshots/recurring-dark.png) |
+| **Light mode** | **Add transaction** |
+| ![Dashboard, light mode](docs/screenshots/dashboard-light.png) | ![Transaction dialog](docs/screenshots/transactions-dark.png) |
 
 ## Features
 
@@ -14,6 +16,7 @@ A full-stack personal finance tracker. Record income and expenses, filter and se
 - **Transactions.** Create, edit and delete income and expense records. You can filter by month, type and category, and search notes with debounced input.
 - **Dashboard.** Shows KPI tiles for income, expenses, net balance and savings rate, a 6-month income vs. expense chart with hover tooltips, and a ranked breakdown of spending by category.
 - **Budgets.** Set a monthly limit for each expense category. Each budget shows *On track*, *Almost there* (80% or more) or *Over budget*, using an icon and a label as well as color. The dashboard warns when a category goes over its limit.
+- **Recurring transactions.** Create monthly rules for salary, rent or subscriptions. The server adds each due occurrence automatically, including any months it missed, and never adds the same one twice: a partial unique index on `(rule, date)` makes generation idempotent. A rule set for the 31st runs on the last day of shorter months. When you resume a paused rule, the paused months are skipped instead of back-filled. Deleting a rule keeps the transactions it already created.
 - **CSV export and import.** Export the current filtered view to a CSV file. Imports accept columns in any order and are all-or-nothing: if any row is invalid, nothing is saved and every bad row is reported. Exported cells that start with `=`, `+`, `-` or `@` are escaped so spreadsheets don't run them as formulas.
 - **Per-user data.** Every query is scoped to the signed-in user, and the tests cover this.
 - **Money stored as integer cents.** This avoids floating-point drift.
@@ -39,10 +42,15 @@ client/ (React SPA)              server/ (Express API)
   transactions/ ── /api/transactions ▶ transactions/  routes → service → repository
   dashboard/    ──── /api/summary ──▶  summary/       SQL aggregation + trend fill
   budgets/      ──── /api/budgets ──▶  budgets/       limits + spending status
-                                       db/            schema + node:sqlite
+  recurring/    ─── /api/recurring ─▶  recurring/     rules + idempotent catch-up generation
+                                       db/            versioned migrations (PRAGMA user_version)
 ```
 
-The server is organised by feature. Each feature module has its own routes, Zod schemas, service (business rules) and repository (SQL). `createApp()` receives its dependencies as arguments, so tests run against an in-memory SQLite database.
+The server is organised by feature. Each feature module has its own routes, Zod schemas, service (business rules) and repository (SQL). `createApp()` receives its dependencies as arguments, including a clock, so tests run against an in-memory SQLite database and can move time forward to check recurring generation.
+
+Recurring rules are applied lazily. Before any request that reads transactions, a small middleware brings the user's rules up to date. This means the app needs no cron job or worker process, which suits free hosting that sleeps when idle.
+
+Schema changes are numbered migrations tracked with `PRAGMA user_version`. Each migration runs in its own transaction, and databases created before versioning was added are upgraded in place.
 
 ## Getting started
 
@@ -104,13 +112,17 @@ All endpoints except `/api/auth/register`, `/api/auth/login` and `/api/health` r
 | `GET` | `/api/budgets?month=YYYY-MM` | Budgets with the amount spent, remaining and status |
 | `PUT` | `/api/budgets/:category` | `{ limitCents }`. Creates or updates the budget |
 | `DELETE` | `/api/budgets/:category` | Removes the budget |
+| `GET` | `/api/recurring` | Lists rules, each with its `nextOccurrence` |
+| `POST` | `/api/recurring` | `{ type, amountCents, category, note?, dayOfMonth, startMonth? }`. Creates the rule and adds any occurrences already due |
+| `PATCH` | `/api/recurring/:id` | Partial update. `{ active: false }` pauses the rule |
+| `DELETE` | `/api/recurring/:id` | Deletes the rule. Transactions it already created are kept |
 
 Errors use the same JSON format everywhere: `{ "error": { "code", "message", "issues?" } }`.
 
 ## Testing
 
-- **Server (38 tests).** Covers the auth flows (duplicate email, forged and expired tokens, malformed JSON), the transaction CRUD lifecycle, filtering (including escaping of `LIKE` wildcards), isolation between users, summary aggregation and trend zero-filling, budget status thresholds, the CSV parser (quoted fields, embedded newlines, BOM, formula escaping), all-or-nothing imports and SPA fallback hosting.
-- **Client (24 tests).** Covers money parsing without float drift, formatting, month arithmetic, the transaction form (type switching, validation, surfacing server errors) and the budget card's states and editing.
+- **Server (48 tests).** Covers the auth flows (duplicate email, forged and expired tokens, malformed JSON), the transaction CRUD lifecycle, filtering (including escaping of `LIKE` wildcards), isolation between users, summary aggregation and trend zero-filling, budget status thresholds, the CSV parser (quoted fields, embedded newlines, BOM, formula escaping), all-or-nothing imports, recurring rules (catch-up, idempotency, month-end clamping, pause and resume as time moves forward), upgrading an old database schema, and SPA fallback hosting.
+- **Client (36 tests).** Covers money parsing without float drift, formatting, month arithmetic, the transaction and recurring forms, ordinal day labels, and the budget card's states and editing.
 
 ## Deploying a live demo (Render, free plan)
 
@@ -126,7 +138,7 @@ The repo includes a [`render.yaml`](render.yaml) blueprint.
 
 - [x] Monthly budgets per category with over-budget alerts
 - [x] CSV import and export
-- [ ] Recurring transactions
+- [x] Recurring transactions
 - [ ] Refresh-token rotation and login rate limiting
 - [ ] Playwright end-to-end tests in CI
 - [ ] Migrate to PostgreSQL behind the repository interfaces for multi-instance deploys

@@ -1,13 +1,15 @@
 import bcrypt from 'bcryptjs';
 import { loadConfig } from '../src/config.js';
 import { openDatabase, type Database } from '../src/db/database.js';
+import { RecurringRepository, type RecurringRuleDraft } from '../src/recurring/recurring.repository.js';
+import { RecurringService } from '../src/recurring/recurring.service.js';
 import { currentMonth, shiftMonth } from '../src/transactions/month.js';
 
 export const DEMO_EMAIL = 'demo@spendwise.dev';
 export const DEMO_PASSWORD = 'demo1234';
 const MONTHS_OF_HISTORY = 6;
 
-interface RecurringEntry {
+interface PatternEntry {
   type: 'income' | 'expense';
   category: string;
   note: string;
@@ -16,10 +18,8 @@ interface RecurringEntry {
   jitter: number;
 }
 
-const MONTHLY_PATTERN: RecurringEntry[] = [
-  { type: 'income', category: 'Salary', note: 'Monthly salary', day: 1, baseCents: 6_500_000, jitter: 0 },
+const MONTHLY_PATTERN: PatternEntry[] = [
   { type: 'income', category: 'Freelance', note: 'Landing page project', day: 18, baseCents: 1_200_000, jitter: 0.6 },
-  { type: 'expense', category: 'Housing', note: 'Condo rent', day: 2, baseCents: 1_500_000, jitter: 0 },
   { type: 'expense', category: 'Utilities', note: 'Electricity & internet', day: 6, baseCents: 220_000, jitter: 0.25 },
   { type: 'expense', category: 'Food & Dining', note: 'Groceries', day: 4, baseCents: 320_000, jitter: 0.3 },
   { type: 'expense', category: 'Food & Dining', note: 'Dinner with friends', day: 14, baseCents: 180_000, jitter: 0.5 },
@@ -28,8 +28,14 @@ const MONTHLY_PATTERN: RecurringEntry[] = [
   { type: 'expense', category: 'Transport', note: 'Grab rides', day: 16, baseCents: 90_000, jitter: 0.6 },
   { type: 'expense', category: 'Shopping', note: 'Clothes & home', day: 11, baseCents: 260_000, jitter: 0.8 },
   { type: 'expense', category: 'Entertainment', note: 'Streaming & movies', day: 9, baseCents: 75_000, jitter: 0.4 },
-  { type: 'expense', category: 'Health', note: 'Gym membership', day: 5, baseCents: 120_000, jitter: 0 },
   { type: 'expense', category: 'Education', note: 'Online course', day: 24, baseCents: 99_000, jitter: 0.5 },
+];
+
+const DEMO_RECURRING: Omit<RecurringRuleDraft, 'startMonth' | 'active'>[] = [
+  { type: 'income', category: 'Salary', note: 'Monthly salary', dayOfMonth: 1, amountCents: 6_500_000 },
+  { type: 'expense', category: 'Housing', note: 'Condo rent', dayOfMonth: 2, amountCents: 1_500_000 },
+  { type: 'expense', category: 'Health', note: 'Gym membership', dayOfMonth: 5, amountCents: 120_000 },
+  { type: 'expense', category: 'Entertainment', note: 'Streaming subscription', dayOfMonth: 28, amountCents: 41_900 },
 ];
 
 const DEMO_BUDGETS: [category: string, limitCents: number][] = [
@@ -79,7 +85,14 @@ export function seedDemoData(db: Database, now: Date = new Date()): number {
       inserted += 1;
     }
   }
-  return inserted;
+  return inserted + seedRecurringRules(db, userId, now);
+}
+
+function seedRecurringRules(db: Database, userId: number, now: Date): number {
+  const repository = new RecurringRepository(db);
+  const startMonth = shiftMonth(currentMonth(now), -(MONTHS_OF_HISTORY - 1));
+  for (const rule of DEMO_RECURRING) repository.create(userId, { ...rule, startMonth, active: true });
+  return new RecurringService(repository, () => now).sync(userId);
 }
 
 const isEntrypoint = process.argv[1]?.replace(/\\/g, '/').endsWith('fixtures/demo-seed.ts');

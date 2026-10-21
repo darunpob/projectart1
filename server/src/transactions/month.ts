@@ -18,3 +18,12 @@ export function shiftMonth(month: string, offset: number): string {
 export function currentMonth(now: Date = new Date()): string {
   return now.toISOString().slice(0, 7);
 }
+
+export function todayIso(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}
+
+export function daysInMonth(month: string): number {
+  const [year, monthIndex] = month.split('-').map(Number) as [number, number];
+  return new Date(Date.UTC(year, monthIndex, 0)).getUTCDate();
+}

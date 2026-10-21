@@ -5,6 +5,7 @@ import { AuthPage } from './auth/AuthPage';
 import { BudgetsPage } from './budgets/BudgetsPage';
 import { DashboardPage } from './dashboard/DashboardPage';
 import { AppShell } from './layout/AppShell';
+import { RecurringPage } from './recurring/RecurringPage';
 import { TransactionsPage } from './transactions/TransactionsPage';
 
 function RequireSession({ children }: { children: ReactNode }) {
@@ -37,6 +38,7 @@ export function App() {
             <Route index element={<DashboardPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="budgets" element={<BudgetsPage />} />
+            <Route path="recurring" element={<RecurringPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

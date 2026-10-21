@@ -738,6 +738,7 @@ a:hover {
 }
 
 .table-wrap {
+  position: relative;
   overflow-x: auto;
 }
 
@@ -981,6 +982,38 @@ a:hover {
   color: var(--negative);
 }
 
+.recurring-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: var(--space-2);
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.rule-name {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-weight: 600;
+}
+
+.table tr.is-paused td {
+  opacity: 0.55;
+}
+
+.table tr.is-paused td.row-actions {
+  opacity: 1;
+}
+
+.form-hint {
+  margin: 0;
+  font-size: 13px;
+}
+
 .dialog {
   width: min(480px, calc(100vw - 32px));
   padding: var(--space-4);
@@ -1033,13 +1066,17 @@ a:hover {
   .nav {
     order: 3;
     flex-basis: 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .nav__link {
     justify-content: center;
-    gap: var(--space-2);
-    padding: 0 var(--space-2);
+    padding: 0 var(--space-1);
+    font-size: 13px;
+  }
+
+  .nav__icon {
+    display: none;
   }
 
   .sidebar__footer {

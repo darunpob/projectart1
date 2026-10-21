@@ -4,8 +4,8 @@ import { openDatabase } from '../src/db/database.js';
 
 export const TEST_JWT_SECRET = 'test-secret';
 
-export function buildTestApp() {
-  return createApp({ db: openDatabase(':memory:'), jwtSecret: TEST_JWT_SECRET });
+export function buildTestApp(clock?: () => Date) {
+  return createApp({ db: openDatabase(':memory:'), jwtSecret: TEST_JWT_SECRET, clock });
 }
 
 export type TestApp = ReturnType<typeof buildTestApp>;

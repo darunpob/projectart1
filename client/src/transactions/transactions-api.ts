@@ -10,6 +10,7 @@ export interface Transaction {
   note: string;
   occurredOn: string;
   createdAt: string;
+  recurringRuleId: number | null;
 }
 
 export type TransactionDraft = Pick<Transaction, 'type' | 'amountCents' | 'category' | 'note' | 'occurredOn'>;
